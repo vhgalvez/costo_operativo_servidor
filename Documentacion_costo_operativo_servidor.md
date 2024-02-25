@@ -36,7 +36,7 @@
    Concede permisos de ejecución al script:
 
    ```bash
-   sudo chmod +x consumo_temperatura.sh
+   sudo chmod +x costo_operativo_servidor.sh
    ```
 
 4. **Ejecutar el script**
@@ -44,7 +44,7 @@
    Inicia el script con el siguiente comando para ver la temperatura y el consumo de energía:
 
    ```bash
-   ./consumo_temperatura.sh
+   ./costo_operativo_servidor.sh
    ```
 
 Siguiendo estos pasos podrás instalar lm_sensors y utilizar un script para monitorear eficazmente la temperatura y el consumo de energía en tu sistema Rocky Linux. Además, este proceso incluirá el cálculo del costo mensual basado en tus variables de consumo.
