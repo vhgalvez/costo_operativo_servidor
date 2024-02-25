@@ -8,6 +8,12 @@ set -e
 set -o errexit  # Finaliza el script si un comando falla.
 set -o nounset  # Finaliza el script si se intenta usar una variable no declarada.
 
+# Asegúrese de que el script no se ejecute como root para evitar escribir en el directorio /home/root
+if [[ $EUID -eq 0 ]]; then
+   echo "Este script no debe ser ejecutado como root. Por favor, ejecute como un usuario regular." 
+   exit 1
+fi
+
 # Definición de variables globales.
 fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
 directorio_salida="/home/$USER/costo_operativo_servidor"
