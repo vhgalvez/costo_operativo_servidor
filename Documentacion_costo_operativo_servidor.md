@@ -57,6 +57,21 @@ cat salida_consumo_temperatura_2024-02-25_21-11-47.txt
    ```bash
 sudo sh -c 'sensors > /home/victory/infra_code/info/consumo_temperatura.txt'
 ```
-
+rtetdf
 
 # https://www.linuxtotal.com.mx/index.php?cont=distintas-maneras-uptime
+
+
+Cambiar la propiedad del directorio y sus archivos al usuario actual (ya lo has hecho, pero lo incluyo para completitud):
+bash
+Copy code
+sudo chown -R $USER:$USER /home/$USER/costo_operativo_servidor
+Otorgar permisos de ejecución al script:
+bash
+Copy code
+chmod +x ./costo_operativo_servidor.sh
+Ejecutar el script como usuario regular (no como root):
+bash
+Copy code
+./costo_operativo_servidor.sh
+Con estos pasos, tu script costo_operativo_servidor.sh debería ejecutarse correctamente, mostrando la salida deseada sin errores de permisos.
