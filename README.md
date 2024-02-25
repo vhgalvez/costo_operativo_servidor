@@ -13,14 +13,15 @@ Este repositorio contiene un script de Bash diseñado para monitorear y registra
 Para utilizar este script, sigue los siguientes pasos:
 
 1. Clona el repositorio en tu servidor Linux:
-
+   
+```bash
 git clone https://github.com/vhgalvez/costo_operativo_servidor.git
+```
+1. Navega al directorio del script:
 
-css
-Copy code
-2. Navega al directorio del script:
+```bash
 cd costo_operativo_servidor
-
+```
 
 1. Otorga permisos de ejecución al script:
    
