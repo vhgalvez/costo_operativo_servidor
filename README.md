@@ -21,19 +21,21 @@ Copy code
 2. Navega al directorio del script:
 cd costo_operativo_servidor
 
-markdown
-Copy code
-3. Otorga permisos de ejecución al script:
+
+1. Otorga permisos de ejecución al script:
+   
+```bash
 chmod +x costo_operativo_servidor.sh
+```
 
-markdown
-Copy code
-4. Ejecuta el script:
+
+1. Ejecuta el script:
+   
+```bash
 ./costo_operativo_servidor.sh
+```
 
-markdown
-Copy code
-
+El script generará un archivo de salida con la fecha y hora de ejecución, que contendrá la temperatura y el consumo de energía del sistema, así como el costo estimado basado en el precio por kWh definido por el usuario.
 ## Requisitos
 
 - Sistema operativo Linux con `bash`
