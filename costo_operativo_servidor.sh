@@ -10,7 +10,7 @@ set -o nounset  # Finaliza el script si se intenta usar una variable no declarad
 
 # Definición de variables globales.
 fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
-directorio_salida="/home/victory/infra_code/consumo"
+directorio_salida="/home/$USER/costo_operativo_servidor"
 archivo_salida="${directorio_salida}/salida_consumo_temperatura_${fecha_hora}.txt"
 costo_kwh=0.189
 
@@ -45,10 +45,10 @@ escribir_resultados() {
     echo "Fecha y Hora:                      $(date)" >> "$archivo_salida"
     echo "Temperatura:                       $temperatura°C" >> "$archivo_salida"
     echo "Consumo de energía estimado:       ${consumo_watts} W" >> "$archivo_salida"
-    echo "Consumo por hora estimado:         $(printf "%.3f kWh" "$consumo_kwh_por_hora")" >> "$archivo_salida"
-    echo "Costo por hora estimado:           $(printf "€%.3f" "$costo_por_hora")" >> "$archivo_salida"
-    echo "Tiempo encendido:                  $(printf "%.2f horas" "$horas_encendido")" >> "$archivo_salida"
-    echo "Costo por el tiempo encendido hoy: $(printf "€%.2f" "$costo_por_tiempo_encendido")" >> "$archivo_salida"
+    echo "Consumo por hora estimado:         ${consumo_kwh_por_hora} kWh" >> "$archivo_salida"
+    echo "Costo por hora estimado:           €${costo_por_hora}" >> "$archivo_salida"
+    echo "Tiempo encendido:                  ${horas_encendido} horas" >> "$archivo_salida"
+    echo "Costo por el tiempo encendido hoy: €${costo_por_tiempo_encendido}" >> "$archivo_salida"
     echo "Resultados guardados en $archivo_salida."
 }
 
