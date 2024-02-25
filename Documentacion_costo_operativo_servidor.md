@@ -36,7 +36,7 @@
    Concede permisos de ejecución al script:
 
    ```bash
-   sudo chmod +x costo_operativo_servidor.sh
+   sudo chown -R $USER:$USER /home/$USER/costo_operativo_servidor
    ```
 
 4. **Ejecutar el script**

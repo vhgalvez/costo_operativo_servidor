@@ -26,7 +26,7 @@ cd costo_operativo_servidor
 1. Otorga permisos de ejecución al script:
    
 ```bash
-chmod +x costo_operativo_servidor.sh
+sudo chown -R $USER:$USER /home/$USER/costo_operativo_servidor
 ```
 
 
