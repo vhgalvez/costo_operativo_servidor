@@ -38,15 +38,16 @@ formatear_costo() {
 # Función para calcular el tiempo operativo y el costo por día
 calcular_costo_por_dia() {
     echo "Tiempo operativo y costo por día:" >> "$archivo_salida"
-    last reboot -F | grep 'system boot' | while read -r line ; do
-        fecha=$(echo "$line" | awk '{print $6}')
-        hora_inicio=$(date -d "$(echo "$line" | awk '{print $7, $8, $9, $10}')" +%s)
-        if [[ "$line" =~ "still running" ]]; then
-            hora_fin=$(date +%s)
-        else
-            hora_fin=$(date -d "$(echo "$line" | awk '{print $13, $14, $15, $16}')" +%s)
+    last -x reboot | tac | grep -Eo 'reboot   system boot  [^\(]+' | while read -r line ; do
+        fecha=$(echo "$line" | awk '{print $5}')
+        hora_inicio=$(echo "$line" | awk '{print $7 " " $8 " " $9 " " $10}')
+        hora_fin=$(echo "$line" | awk '{print $12 " " $13 " " $14 " " $15}')
+        if [[ $hora_fin == *"still"* ]]; then
+            hora_fin=$(date "+%Y-%m-%d %H:%M:%S")
         fi
-        horas_operativas=$(echo "scale=2; ($hora_fin - $hora_inicio) / 3600" | bc)
+        hora_inicio_sec=$(date -d "$hora_inicio" +%s)
+        hora_fin_sec=$(date -d "$hora_fin" +%s)
+        horas_operativas=$(echo "scale=2; ($hora_fin_sec - $hora_inicio_sec) / 3600" | bc)
         consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
         costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
         echo "$fecha: $horas_operativas horas, Costo: $(formatear_costo $costo)" >> "$archivo_salida"
@@ -67,3 +68,4 @@ main() {
 }
 
 main
+
