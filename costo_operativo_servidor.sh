@@ -7,8 +7,8 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 set -e
-set -o errexit
-set -o nounset
+set -o errexit  # Finaliza el script si un comando falla.
+set -o nounset  # Finaliza el script si se intenta usar una variable no declarada.
 
 fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
 directorio_salida="/home/$USER/costo_operativo_servidor"
@@ -31,7 +31,9 @@ capturar_datos() {
     consumo_kwh_por_hora=$(echo "scale=3; $consumo_watts / 1000" | bc)
     costo_por_hora=$(echo "scale=2; $consumo_kwh_por_hora * $costo_kwh" | bc)
     consumo_kwh_por_dia=$(echo "scale=2; $consumo_kwh_por_hora * $horas_por_dia" | bc)
-    costo_mensual=$(echo "scale=2; $consumo_kwh_por_dia * $dias_por_mes * $costo_kwh" | bc)
+    costo_por_dia=$(echo "scale=2; $consumo_kwh_por_dia * $costo_kwh" | bc)
+    consumo_kwh_mensual=$(echo "scale=2; $consumo_kwh_por_dia * $dias_por_mes" | bc)
+    costo_mensual=$(echo "scale=2; $consumo_kwh_mensual * $costo_kwh" | bc)
 }
 
 # Función para calcular el tiempo de funcionamiento y el costo asociado.
@@ -46,14 +48,13 @@ calcular_tiempo_funcionamiento() {
 
 # Define una función auxiliar para formatear la salida de costos
 formatear_costo() {
-    local costo=$1
-    # Convertir a céntimos si el valor es menor que 1 euro
+    local costo=$(echo "scale=2; $1 / 1" | bc -l)  # Redondear a 2 decimales.
     if (( $(echo "$costo < 1" | bc -l) )); then
-        # Formatear a dos decimales y agregar 'céntimos de euro'
-        printf "%.2f céntimos de euro" "$(echo "$costo * 100" | bc)"
+        # Convertir a céntimos si el valor es menor que 1 euro
+        echo "$(echo "scale=2; $costo * 100 / 1" | bc) céntimos de euro"
     else
-        # Formatear a dos decimales y agregar 'euros'
-        printf "%.2f euros" "$costo"
+        # Mostrar como euros si el valor es igual o mayor que 1 euro
+        echo "$costo euros"
     fi
 }
 
@@ -62,16 +63,17 @@ escribir_resultados() {
     echo "Métrica                                         Valor" > "$archivo_salida"
     echo "-------                                         -----" >> "$archivo_salida"
     echo "Temperatura Promedio de los Núcleos:            $temperatura" >> "$archivo_salida"
-    echo "Consumo de Energía (Watts):                     $consumo_watts W" >> "$archivo_salida"
-    echo "Consumo por hora estimado:                      ${consumo_kwh_por_hora} kWh" >> "$archivo_salida"
-    echo "Costo por hora estimado:                        $(formatear_costo $costo_por_hora)" >> "$archivo_salida"
-    echo "Consumo por día estimado:                       ${consumo_kwh_por_dia} kWh" >> "$archivo_salida"
-    echo "Costo por día estimado:                         $(formatear_costo $costo_por_dia)" >> "$archivo_salida"
-    echo "Consumo mensual estimado:                       ${consumo_kwh_mensual} kWh" >> "$archivo_salida"
-    echo "Costo mensual estimado:                         $(formatear_costo $(echo "$costo_mensual / 100" | bc -l))" >> "$archivo_salida"
-    echo "Tiempo encendido:                               ${horas_encendido} horas" >> "$archivo_salida"
-    echo "Consumo por el tiempo encendido hoy:            ${consumo_kwh_encendido} kWh" >> "$archivo_salida"
-    echo "Costo por el tiempo encendido hoy:              $(formatear_costo $costo_por_tiempo_encendido)" >> "$archivo_salida"
+    echo "Consumo de Energía (Watts):                    $consumo_watts W" >> "$archivo_salida"
+    echo "Consumo por hora estimado:                     ${consumo_kwh_por_hora} kWh" >> "$archivo_salida"
+    echo "Costo por hora estimado:                       $(formatear_costo $costo_por_hora)" >> "$archivo_salida"
+    echo "Consumo por día estimado:                      ${consumo_kwh_por_dia} kWh" >> "$archivo_salida"
+    echo "Costo por día estimado:                        $(formatear_costo $costo_por_dia)" >> "$archivo_salida"
+    echo "Consumo mensual estimado:                      ${consumo_kwh_mensual} kWh" >> "$archivo_salida"
+    echo "Costo mensual estimado:                        $(formatear_costo $(echo "$costo_mensual" | bc -l))" >> "$archivo_salida"
+    echo "Tiempo encendido:                              ${horas_encendido} horas" >> "$archivo_salida"
+    echo "Consumo por el tiempo encendido hoy:           ${consumo_kwh_encendido} kWh" >> "$archivo_salida"
+    echo "Costo por el tiempo encendido hoy:             $(formatear_costo $costo_por_tiempo_encendido)" >> "$archivo_salida"
+    echo "Resultados guardados en $archivo_salida."
 }
 
 # Función principal que orquesta la ejecución del script.
