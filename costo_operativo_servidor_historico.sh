@@ -35,19 +35,22 @@ formatear_costo() {
     fi
 }
 
-# Función para calcular el costo desde el último reinicio
-calcular_costo_desde_reinicio() {
-    # Obtener el tiempo en horas desde el último reinicio
-    ultimo_reinicio=$(last reboot -F | head -1 | awk '{print $5, $6, $7, $8, $9}')
-    ultimo_reinicio_sec=$(date -d "$ultimo_reinicio" +%s)
-    ahora_sec=$(date +%s)
-    horas_operativas=$(echo "scale=2; ($ahora_sec - $ultimo_reinicio_sec) / 3600" | bc)
-
-    # Calcular el costo
-    consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
-    costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
-    echo "Tiempo operativo desde el último reinicio: $horas_operativas horas" >> "$archivo_salida"
-    echo "Costo desde el último reinicio: $(formatear_costo $costo)" >> "$archivo_salida"
+# Función para calcular el tiempo operativo y el costo por día
+calcular_costo_por_dia() {
+    echo "Tiempo operativo y costo por día:" >> "$archivo_salida"
+    last reboot -F | grep 'system boot' | while read -r line ; do
+        fecha=$(echo "$line" | awk '{print $6}')
+        hora_inicio=$(date -d "$(echo "$line" | awk '{print $7, $8, $9, $10}')" +%s)
+        if [[ "$line" =~ "still running" ]]; then
+            hora_fin=$(date +%s)
+        else
+            hora_fin=$(date -d "$(echo "$line" | awk '{print $13, $14, $15, $16}')" +%s)
+        fi
+        horas_operativas=$(echo "scale=2; ($hora_fin - $hora_inicio) / 3600" | bc)
+        consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
+        costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
+        echo "$fecha: $horas_operativas horas, Costo: $(formatear_costo $costo)" >> "$archivo_salida"
+    done
 }
 
 # Función para escribir los resultados en el archivo de salida
@@ -55,7 +58,7 @@ escribir_resultados() {
     echo "Reporte de Consumo de Energía" > "$archivo_salida"
     echo "Fecha y Hora de Reporte: $fecha_hora" >> "$archivo_salida"
     echo "-----------------------------------------" >> "$archivo_salida"
-    calcular_costo_desde_reinicio
+    calcular_costo_por_dia
 }
 
 main() {
