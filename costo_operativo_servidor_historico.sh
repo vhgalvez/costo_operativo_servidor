@@ -14,7 +14,7 @@ fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
 directorio_salida="/home/$USER/costo_operativo_servidor"
 archivo_salida="${directorio_salida}/salida_consumo_temperatura_${fecha_hora}.txt"
 costo_kwh=0.189
-consumo_watts=125 # Consumo constante en Watts para este ejemplo
+consumo_watts=125
 consumo_kwh_por_hora=$(echo "scale=3; $consumo_watts / 1000" | bc)
 
 # Función para crear el directorio de salida si no existe
@@ -35,21 +35,20 @@ formatear_costo() {
     fi
 }
 
-# Función para calcular el tiempo operativo y el costo por día
+# Función para calcular y sumar el tiempo operativo por día y el costo asociado
 calcular_costo_por_dia() {
     echo "Tiempo operativo y costo por día:" >> "$archivo_salida"
-    last -x reboot | tac | grep -Eo 'reboot   system boot  [^\(]+' | while read -r line ; do
-        fecha=$(echo "$line" | awk '{print $5}')
-        hora_inicio=$(echo "$line" | awk '{print $7 " " $8 " " $9 " " $10}')
-        hora_fin=$(echo "$line" | awk '{print $12 " " $13 " " $14 " " $15}')
-        if [[ $hora_fin == *"still"* ]]; then
-            hora_fin=$(date "+%Y-%m-%d %H:%M:%S")
-        fi
-        hora_inicio_sec=$(date -d "$hora_inicio" +%s)
-        hora_fin_sec=$(date -d "$hora_fin" +%s)
-        horas_operativas=$(echo "scale=2; ($hora_fin_sec - $hora_inicio_sec) / 3600" | bc)
+    # Obtener tiempos de inicio de sesión y reinicios
+    last -F reboot | awk '/reboot/{print $8, $9, $5, $6, $7}' | while read -r fecha inicio fin; do
+        # Convertir a segundos desde la época
+        inicio_sec=$(date -d "$inicio" +%s)
+        fin_sec=$(date -d "$fin" +%s 2>/dev/null || date +%s)
+        # Calcular diferencia en horas
+        horas_operativas=$(echo "scale=2; ($fin_sec - $inicio_sec) / 3600" | bc)
+        # Calcular consumo y costo
         consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
         costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
+        # Imprimir resultado
         echo "$fecha: $horas_operativas horas, Costo: $(formatear_costo $costo)" >> "$archivo_salida"
     done
 }
@@ -68,4 +67,5 @@ main() {
 }
 
 main
+
 
