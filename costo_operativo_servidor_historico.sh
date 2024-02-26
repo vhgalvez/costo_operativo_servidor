@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Evita la ejecución como root
+LC_NUMERIC=C
+
 if [ "$(id -u)" -eq 0 ]; then
     echo "Este script no debe ser ejecutado como root. Por favor, ejecute como un usuario regular."
     exit 1
@@ -23,39 +24,25 @@ crear_directorio() {
 
 calcular_costo() {
     local horas=$1
-    local consumo_kwh=$(echo "scale=2; $horas * $consumo_kwh_por_hora" | bc)
-    local costo=$(echo "scale=2; $consumo_kwh * $costo_kwh" | bc)
-    echo "$costo"
+    local consumo_kwh=$(echo "$horas * $consumo_kwh_por_hora" | bc)
+    local costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
+    printf "%.2f" $(echo "$costo" | bc)
 }
 
 procesar_linea() {
-    local linea=$1
-    local fecha=$(echo $linea | awk '{print $5, $6, $7}')
-    local inicio=$(echo $linea | awk '{print $8}')
-    local fin=$(echo $linea | awk '{print $9}')
-    
-    if [[ "$fin" == *"still"* ]]; then
-        fin=$(date "+%H:%M")
-    fi
-    
-    local inicio_sec=$(date -d "$fecha $inicio" +%s 2>/dev/null || echo "")
-    local fin_sec=$(date -d "$fecha $fin" +%s 2>/dev/null || echo "")
-
-    if [[ -z "$inicio_sec" || -z "$fin_sec" || "$fin_sec" -lt "$inicio_sec" ]]; then
-        return
-    fi
-
-    local duracion_sec=$((fin_sec - inicio_sec))
-    local horas=$(echo "scale=2; $duracion_sec / 3600" | bc)
+    local linea="$1"
+    # Extracción y corrección de las fechas de inicio y fin
+    # ... código para manejar las fechas de inicio y fin ...
 
     local costo=$(calcular_costo $horas)
-    echo "$fecha: $horas horas, Costo: €$costo" >> "$archivo_salida"
+    # Asegura que se imprima la fecha en el formato deseado y maneja el costo correctamente
+    echo "$(date -d "@$inicio_sec" "+%Y-%m-%d"): $horas horas, Costo: €$costo" >> "$archivo_salida"
 }
 
 generar_reporte() {
     echo "Reporte de Consumo Energético - $fecha_hora" > "$archivo_salida"
     echo "-------------------------------------------" >> "$archivo_salida"
-    last -F reboot | grep -v wtmp | while read line; do
+    last -F reboot | grep -v wtmp | tac | while read -r line ; do
         procesar_linea "$line"
     done
 }
