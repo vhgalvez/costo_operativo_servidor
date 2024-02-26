@@ -38,17 +38,19 @@ formatear_costo() {
 # Función para calcular y sumar el tiempo operativo por día y el costo asociado
 calcular_costo_por_dia() {
     echo "Tiempo operativo y costo por día:" >> "$archivo_salida"
-    # Obtener tiempos de inicio de sesión y reinicios
-    last -F reboot | awk '/reboot/{print $8, $9, $5, $6, $7}' | while read -r fecha inicio fin; do
-        # Convertir a segundos desde la época
-        inicio_sec=$(date -d "$inicio" +%s)
-        fin_sec=$(date -d "$fin" +%s 2>/dev/null || date +%s)
-        # Calcular diferencia en horas
+    # Obtener fechas y horas de reinicio del sistema
+    last -x reboot | grep reboot | while read -r line ; do
+        fecha=$(echo "$line" | awk '{print $6,$7,$8}')
+        inicio=$(echo "$line" | awk '{print $9}')
+        fin=$(echo "$line" | awk '{print $10}')
+        if [[ "$fin" == *"+"* ]]; then
+            fin=$(date "+%H:%M")
+        fi
+        inicio_sec=$(date -d "$fecha $inicio" +%s)
+        fin_sec=$(date -d "$fecha $fin" +%s)
         horas_operativas=$(echo "scale=2; ($fin_sec - $inicio_sec) / 3600" | bc)
-        # Calcular consumo y costo
         consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
         costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
-        # Imprimir resultado
         echo "$fecha: $horas_operativas horas, Costo: $(formatear_costo $costo)" >> "$archivo_salida"
     done
 }
@@ -67,5 +69,3 @@ main() {
 }
 
 main
-
-
