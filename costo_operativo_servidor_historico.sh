@@ -7,86 +7,60 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 set -e
-set -o errexit  # Finaliza el script si un comando falla.
-set -o nounset  # Finaliza el script si se intenta usar una variable no declarada.
+set -o errexit
+set -o nounset
 
 fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
 directorio_salida="/home/$USER/costo_operativo_servidor"
 archivo_salida="${directorio_salida}/salida_consumo_temperatura_${fecha_hora}.txt"
 costo_kwh=0.189
-horas_por_dia=24
-dias_por_mes=30
+consumo_watts=125 # Consumo constante en Watts para este ejemplo
+consumo_kwh_por_hora=$(echo "scale=3; $consumo_watts / 1000" | bc)
 
-# Función para crear el directorio de salida si no existe.
+# Función para crear el directorio de salida si no existe
 crear_directorio() {
     if [ ! -d "$directorio_salida" ]; then
         mkdir -p "$directorio_salida"
     fi
 }
 
-# Función para capturar los datos de los sensores y calcular el consumo.
-capturar_datos() {
-    temperatura=$(sensors | grep -i 'core 0' | awk '{print $3}')
-    consumo_watts=$(sensors | grep -i 'power1' | awk '{print $2}' | sed 's/W//')
-    consumo_kwh_por_hora=$(echo "scale=3; $consumo_watts / 1000" | bc)
-    costo_por_hora=$(echo "scale=2; $consumo_kwh_por_hora * $costo_kwh" | bc)
-    consumo_kwh_por_dia=$(echo "scale=2; $consumo_kwh_por_hora * $horas_por_dia" | bc)
-    costo_por_dia=$(echo "scale=2; $consumo_kwh_por_dia * $costo_kwh" | bc)
-    consumo_kwh_mensual=$(echo "scale=2; $consumo_kwh_por_dia * $dias_por_mes" | bc)
-    costo_mensual=$(echo "scale=2; $consumo_kwh_mensual * $costo_kwh" | bc)
-}
-
-# Función para calcular el tiempo de funcionamiento y el costo asociado.
-calcular_tiempo_funcionamiento() {
-    inicio=$(date -d "$(uptime -s)" +%s)
-    ahora=$(date +%s)
-    segundos_encendido=$((ahora - inicio))
-    horas_encendido=$(echo "scale=2; $segundos_encendido / 3600" | bc)
-    consumo_kwh_encendido=$(echo "scale=2; $consumo_kwh_por_hora * $horas_encendido" | bc)
-    costo_por_tiempo_encendido=$(echo "scale=2; $consumo_kwh_encendido * $costo_kwh" | bc)
-}
-
 # Función auxiliar para formatear la salida de costos
 formatear_costo() {
     local costo=$1
-    # Asegurarse de usar el punto como separador decimal para `printf`
-    LC_NUMERIC=C 
+    LC_NUMERIC=C
     if (( $(echo "$costo < 1" | bc -l) )); then
-        # Convertir a céntimos si el valor es menor que 1 euro
         printf "%.2f céntimos de euro" "$(echo "$costo * 100" | bc)"
     else
-        # Mostrar como euros si el valor es igual o mayor que 1 euro
         printf "%.2f euros" "$costo"
     fi
 }
 
-# Función para escribir los resultados en el archivo de salida de forma más legible.
-escribir_resultados() {
-    echo "Métrica                                         Valor" > "$archivo_salida"
-    echo "-------                                         -----" >> "$archivo_salida"
-    echo "Temperatura Promedio de los Núcleos:            $temperatura" >> "$archivo_salida"
-    echo "Consumo de Energía (Watts):                     $consumo_watts W" >> "$archivo_salida"
-    echo "Consumo por hora estimado:                      ${consumo_kwh_por_hora} kWh" >> "$archivo_salida"
-    echo "Costo por hora estimado:                        $(formatear_costo $costo_por_hora)" >> "$archivo_salida"
-    echo "Consumo por día estimado:                       ${consumo_kwh_por_dia} kWh" >> "$archivo_salida"
-    echo "Costo por día estimado:                         $(formatear_costo $costo_por_dia)" >> "$archivo_salida"
-    echo "Consumo mensual estimado:                       ${consumo_kwh_mensual} kWh" >> "$archivo_salida"
-    echo "Costo mensual estimado:                         $(formatear_costo $costo_mensual)" >> "$archivo_salida"
-    echo "Tiempo encendido:                               ${horas_encendido} horas" >> "$archivo_salida"
-    echo "Consumo por el tiempo encendido hoy:            ${consumo_kwh_encendido} kWh" >> "$archivo_salida"
-    echo "Costo por el tiempo encendido hoy:              $(formatear_costo $costo_por_tiempo_encendido)" >> "$archivo_salida"
+# Función para calcular el costo desde el último reinicio
+calcular_costo_desde_reinicio() {
+    # Obtener el tiempo en horas desde el último reinicio
+    ultimo_reinicio=$(last reboot -F | head -1 | awk '{print $5, $6, $7, $8, $9}')
+    ultimo_reinicio_sec=$(date -d "$ultimo_reinicio" +%s)
+    ahora_sec=$(date +%s)
+    horas_operativas=$(echo "scale=2; ($ahora_sec - $ultimo_reinicio_sec) / 3600" | bc)
+
+    # Calcular el costo
+    consumo_kwh=$(echo "$consumo_kwh_por_hora * $horas_operativas" | bc)
+    costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
+    echo "Tiempo operativo desde el último reinicio: $horas_operativas horas" >> "$archivo_salida"
+    echo "Costo desde el último reinicio: $(formatear_costo $costo)" >> "$archivo_salida"
 }
 
-# Función principal que orquesta la ejecución del script.
+# Función para escribir los resultados en el archivo de salida
+escribir_resultados() {
+    echo "Reporte de Consumo de Energía" > "$archivo_salida"
+    echo "Fecha y Hora de Reporte: $fecha_hora" >> "$archivo_salida"
+    echo "-----------------------------------------" >> "$archivo_salida"
+    calcular_costo_desde_reinicio
+}
+
 main() {
     crear_directorio
-    capturar_datos
-    calcular_tiempo_funcionamiento
     escribir_resultados
 }
 
-# Ejecución de la función principal.
 main
-
-# Fin del script.
-exit 0
