@@ -10,66 +10,51 @@ set -e
 set -o errexit
 set -o nounset
 
-# Variables globales
 fecha_hora=$(date "+%Y-%m-%d_%H-%M-%S")
 directorio_salida="/home/$USER/costo_operativo_servidor"
 archivo_salida="${directorio_salida}/salida_consumo_temperatura_${fecha_hora}.txt"
 costo_kwh=0.189
-consumo_watts=125 # Ajuste este valor según su sistema
+consumo_watts=125
 consumo_kwh_por_hora=$(echo "scale=3; $consumo_watts / 1000" | bc)
 
-# Crea el directorio de salida si no existe
 crear_directorio() {
     mkdir -p "$directorio_salida"
 }
 
-# Calcula el costo en base a las horas de funcionamiento
 calcular_costo() {
     local horas=$1
-    # Asegura que las horas sean positivas antes de calcular
-    if (( $(echo "$horas < 0" | bc -l) )); then
-        horas=0
-    fi
     local consumo_kwh=$(echo "$horas * $consumo_kwh_por_hora" | bc)
     local costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
-    # Redondea a dos decimales
-    printf "%.2f" $(echo "$costo" | bc)
+    echo $(printf "%.2f" $costo)
 }
 
-# Procesa cada línea de "last reboot"
 procesar_linea() {
-    local linea=$1
-    local fecha=$(echo $linea | awk '{print $5, $6, $7}')
-    local inicio=$(echo $linea | awk '{print $8}')
-    local fin=$(echo $linea | awk '{print $9}')
+    local linea="$1"
+    local fecha_inicio=$(echo "$linea" | awk '{print $6, $7, $8, $9}')
+    local fecha_fin=$(echo "$linea" | awk '{print $11, $12, $13, $14}')
+    local fecha_fin_corr=$(echo "$linea" | grep -oP '(\d{4}-\d{2}-\d{2} \d{2}:\d{2})' | tail -1)
 
-    # Ajusta para entradas "still running"
-    if [[ "$fin" == *"still"* ]]; then
-        fin=$(date "+%H:%M")
+    if [[ -z "$fecha_fin_corr" ]]; then
+        fecha_fin_corr=$(date "+%Y-%m-%d %H:%M")
     fi
 
-    # Calcula segundos de inicio y fin, asegurando que la fecha y hora son válidas
-    local inicio_sec=$(date -d "$fecha $inicio" +%s 2>/dev/null || echo "")
-    local fin_sec=$(date -d "$fecha $fin" +%s 2>/dev/null || echo "")
-
-    if [[ -z "$inicio_sec" || -z "$fin_sec" || "$fin_sec" -lt "$inicio_sec" ]]; then
-        # Si las fechas son inválidas o la duración es negativa, salta esta línea
-        echo "Error en la línea: $linea" >&2
-        return
-    fi
-
+    local inicio_sec=$(date -d "$fecha_inicio" +%s)
+    local fin_sec=$(date -d "$fecha_fin_corr" +%s)
     local duracion_sec=$((fin_sec - inicio_sec))
     local horas=$(echo "scale=2; $duracion_sec / 3600" | bc)
 
+    if (( $(echo "$horas < 0" | bc -l) )); then
+        horas=0
+    fi
+
     local costo=$(calcular_costo $horas)
-    echo "$fecha: $horas horas, Costo: €$costo" >> "$archivo_salida"
+    echo "$(date -d "$fecha_inicio" "+%Y-%m-%d"): $horas horas, Costo: €$costo" >> "$archivo_salida"
 }
 
-# Genera el reporte
 generar_reporte() {
     echo "Reporte de Consumo Energético - $fecha_hora" > "$archivo_salida"
     echo "-------------------------------------------" >> "$archivo_salida"
-    last -F reboot | grep -v wtmp | while read line; do
+    last -F reboot | grep -v wtmp | tac | while read -r line ; do
         procesar_linea "$line"
     done
 }
