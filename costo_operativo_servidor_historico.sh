@@ -23,38 +23,39 @@ crear_directorio() {
 
 calcular_costo() {
     local horas=$1
-    local consumo_kwh=$(echo "$horas * $consumo_kwh_por_hora" | bc)
-    local costo=$(echo "$consumo_kwh * $costo_kwh" | bc)
-    echo $(printf "%.2f" $costo)
+    local consumo_kwh=$(echo "scale=2; $horas * $consumo_kwh_por_hora" | bc)
+    local costo=$(echo "scale=2; $consumo_kwh * $costo_kwh" | bc)
+    echo "$costo"
 }
 
 procesar_linea() {
-    local linea="$1"
-    local fecha_inicio=$(echo "$linea" | awk '{print $6, $7, $8, $9}')
-    local fecha_fin=$(echo "$linea" | awk '{print $11, $12, $13, $14}')
-    local fecha_fin_corr=$(echo "$linea" | grep -oP '(\d{4}-\d{2}-\d{2} \d{2}:\d{2})' | tail -1)
+    local linea=$1
+    local fecha=$(echo $linea | awk '{print $5, $6, $7}')
+    local inicio=$(echo $linea | awk '{print $8}')
+    local fin=$(echo $linea | awk '{print $9}')
+    
+    if [[ "$fin" == *"still"* ]]; then
+        fin=$(date "+%H:%M")
+    fi
+    
+    local inicio_sec=$(date -d "$fecha $inicio" +%s 2>/dev/null || echo "")
+    local fin_sec=$(date -d "$fecha $fin" +%s 2>/dev/null || echo "")
 
-    if [[ -z "$fecha_fin_corr" ]]; then
-        fecha_fin_corr=$(date "+%Y-%m-%d %H:%M")
+    if [[ -z "$inicio_sec" || -z "$fin_sec" || "$fin_sec" -lt "$inicio_sec" ]]; then
+        return
     fi
 
-    local inicio_sec=$(date -d "$fecha_inicio" +%s)
-    local fin_sec=$(date -d "$fecha_fin_corr" +%s)
     local duracion_sec=$((fin_sec - inicio_sec))
     local horas=$(echo "scale=2; $duracion_sec / 3600" | bc)
 
-    if (( $(echo "$horas < 0" | bc -l) )); then
-        horas=0
-    fi
-
     local costo=$(calcular_costo $horas)
-    echo "$(date -d "$fecha_inicio" "+%Y-%m-%d"): $horas horas, Costo: €$costo" >> "$archivo_salida"
+    echo "$fecha: $horas horas, Costo: €$costo" >> "$archivo_salida"
 }
 
 generar_reporte() {
     echo "Reporte de Consumo Energético - $fecha_hora" > "$archivo_salida"
     echo "-------------------------------------------" >> "$archivo_salida"
-    last -F reboot | grep -v wtmp | tac | while read -r line ; do
+    last -F reboot | grep -v wtmp | while read line; do
         procesar_linea "$line"
     done
 }
