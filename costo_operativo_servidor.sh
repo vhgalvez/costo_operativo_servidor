@@ -52,25 +52,35 @@ escribir_resultados() {
     echo "Temperatura Promedio de los Núcleos:            $temperatura" >> "$archivo_salida"
     echo "Consumo de Energía (Watts):                     $consumo_watts W" >> "$archivo_salida"
     echo "" >> "$archivo_salida"
+
+    # Define una función para convertir y formatear el costo.
+    formatear_costo() {
+        local costo=$1
+        if (( $(echo "$costo < 1" | bc -l) )); then
+            echo "$(echo "$costo * 100" | bc) céntimos de euro"
+        else
+            echo "$costo euros"
+        fi
+    }
+
     echo "Consumo por hora estimado:                      ${consumo_kwh_por_hora} kWh" >> "$archivo_salida"
-    costo_por_hora_centimos=$(echo "scale=2; $costo_por_hora * 100 / 1" | bc)
-    echo "Costo por hora estimado:                        ${costo_por_hora_centimos} céntimos de euro" >> "$archivo_salida"
+    echo "Costo por hora estimado:                        $(formatear_costo $costo_por_hora)" >> "$archivo_salida"
     echo "" >> "$archivo_salida"
     echo "Consumo por día estimado:                       ${consumo_kwh_por_dia} kWh" >> "$archivo_salida"
-    costo_por_dia_centimos=$(echo "scale=2; $costo_por_dia * 100 / 1" | bc)
-    echo "Costo por día estimado:                         ${costo_por_dia_centimos} céntimos de euro" >> "$archivo_salida"
+    echo "Costo por día estimado:                         $(formatear_costo $costo_por_dia)" >> "$archivo_salida"
     echo "" >> "$archivo_salida"
     echo "Consumo mensual estimado:                       ${consumo_kwh_mensual} kWh" >> "$archivo_salida"
-    costo_mensual_centimos=$(echo "scale=2; $costo_mensual * 100 / 1" | bc)
-    echo "Costo mensual estimado:                         ${costo_mensual_centimos} céntimos de euro" >> "$archivo_salida"
+    echo "Costo mensual estimado:                         $(formatear_costo $(echo "$costo_mensual / 100" | bc -l))" >> "$archivo_salida"
     echo "" >> "$archivo_salida"
     echo "Tiempo encendido:                               ${horas_encendido} horas" >> "$archivo_salida"
     echo "Consumo por el tiempo encendido hoy:            ${consumo_kwh_encendido} kWh" >> "$archivo_salida"
-    costo_por_tiempo_encendido_centimos=$(echo "scale=2; $costo_por_tiempo_encendido * 100 / 1" | bc)
-    echo "Costo por el tiempo encendido hoy:              ${costo_por_tiempo_encendido_centimos} céntimos de euro" >> "$archivo_salida"
+    echo "Costo por el tiempo encendido hoy:              $(formatear_costo $costo_por_tiempo_encendido)" >> "$archivo_salida"
     echo "" >> "$archivo_salida"
     echo "Resultados guardados en $archivo_salida."
 }
+
+# Asegúrate de definir y calcular las variables de costo correctamente antes de llamar a esta función.
+
 
 
 main() {
