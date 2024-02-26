@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Evita la ejecución como root
 if [ "$(id -u)" -eq 0 ]; then
     echo "Este script no debe ser ejecutado como root. Por favor, ejecute como un usuario regular."
     exit 1
@@ -30,22 +31,22 @@ calcular_costo() {
 
 procesar_linea() {
     local linea="$1"
-    # Asume formato de 'last -F' como "reboot system boot [fecha] [hora inicio] - [hora fin]"
-    local fecha=$(echo "$linea" | awk '{print $7, $6, $8}')
-    local hora_inicio=$(echo "$linea" | awk '{print $9}')
-    local hora_fin=$(echo "$linea" | awk '{print $11}' | sed 's/-//')
+    local fecha_inicio=$(echo "$linea" | awk '{print $6, $7, $8, $9}')
+    local fecha_fin=$(echo "$linea" | awk '{print $11, $12, $13, $14}')
+    local inicio_sec=$(date -d "$fecha_inicio" +%s 2>/dev/null || echo "")
+    local fin_sec=$(date -d "$fecha_fin" +%s 2>/dev/null || echo "")
 
-    if [[ "$hora_fin" == *"still"* ]]; then
-        hora_fin=$(date "+%H:%M")
+    # Comprueba si fin_sec es menor que inicio_sec o si están vacíos y ajusta
+    if [[ -z "$inicio_sec" || -z "$fin_sec" || "$fin_sec" -lt "$inicio_sec" ]]; then
+        echo "Error en la línea: $linea" >&2
+        return
     fi
 
-    local inicio_sec=$(date -d "$fecha $hora_inicio" +%s)
-    local fin_sec=$(date -d "$fecha $hora_fin" +%s)
     local duracion_sec=$((fin_sec - inicio_sec))
     local horas=$(echo "scale=2; $duracion_sec / 3600" | bc)
 
     local costo=$(calcular_costo $horas)
-    echo "$(date -d "@$inicio_sec" "+%Y-%m-%d"): $horas horas, Costo: $costo" >> "$archivo_salida"
+    echo "$(date -d "@$inicio_sec" "+%Y-%m-%d %H:%M"): $horas horas, Costo: $costo" >> "$archivo_salida"
 }
 
 generar_reporte() {
@@ -62,3 +63,4 @@ main() {
 }
 
 main
+
