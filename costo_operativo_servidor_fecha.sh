@@ -41,13 +41,13 @@ procesar_linea() {
     if [[ "$hora_fin" == *"still"* ]]; then
         hora_fin=$(date "+%H:%M")
     fi
-
+    
     # Convertir a segundos para calcular duración
     local inicio_sec=$(date -d "$fecha $hora_inicio" +%s)
     local fin_sec=$(date -d "$fecha $hora_fin" +%s)
     local duracion_sec=$((fin_sec - inicio_sec))
     local horas=$(echo "scale=2; $duracion_sec / 3600" | bc)
-
+    
     # Calcular costo
     local costo=$(calcular_costo "$horas")
     echo "$(date -d "@$inicio_sec" "+%Y-%m-%d"): $horas horas, Costo: $costo" >> "$archivo_salida"
